@@ -1,80 +1,88 @@
+
 # Smart Bharat Civic Advocate Engine (SB-CAE)
 
-A live 3-agent adversarial pipeline for drafting rejection-proof Indian civic
-grievance letters:
+## The problem
 
-- **Agent I — Advocate** (`lib/agents/advocateDraft.js`): drafts the initial letter.
-- **Agent II — Bureaucratic Clerk** (`lib/agents/bureaucraticChallenge.js`): tries to
-  find every real reason to reject or redirect it.
-- **Agent III — Advocate Rebuttal** (`lib/agents/advocateRebuttal.js`): resolves every
-  objection with real legal citations and compiles the final letter, target
-  authorities, and a checklist.
+Indian civic bodies routinely reject or redirect legitimate complaints on
+jurisdictional grounds, even when the underlying issue is undisputed. A common
+pattern: a citizen reports a hazard on a road or public asset, the local
+municipal body claims it belongs to a state or national authority, and that
+authority claims it falls inside city limits and is therefore the
+municipality's responsibility. Neither side is wrong on paper, and the
+complaint sits unresolved while the hazard remains.
 
-Each agent is a separate Claude API call with its own locked system prompt, wired
-through its own API route (`pages/api/agent1-draft.js`, `agent2-challenge.js`,
-`agent3-rebuttal.js`). The frontend (`pages/index.js`) calls them in sequence and
-lights up a live pipeline visualization as each one genuinely completes.
+This is not a one-off failure. It is a structural gap: complaints are drafted
+by citizens who don't know which specific law, ward code, or evidence
+standard will be used to reject their letter, and by the time they find out,
+weeks have passed.
 
-## 1. Run it locally
+## The approach
+
+SB-CAE closes that gap before a human official ever sees the complaint, by
+running the letter through an adversarial review internally, using three
+separate AI agents with conflicting incentives:
+
+1. **The Advocate** drafts the complaint the way a citizen normally would —
+   addressed to the one authority they know about.
+2. **The Bureaucratic Clerk** is instructed to behave like a skeptical desk
+   officer and find every realistic reason to reject or redirect the file:
+   missing ward numbers, missing evidence, and, most importantly,
+   jurisdictional loopholes.
+3. **The Advocate (Rebuttal)** takes those objections and rewrites the letter
+   to close them — citing the specific law that assigns responsibility,
+   naming both disputing authorities jointly where relevant, and adding the
+   evidence and escalation clauses a real clerk would otherwise use as an
+   excuse to delay.
+
+The output is a single letter that has already survived one full round of
+bureaucratic rejection, before it is ever sent.
+
+## What is in this repository
+
+Each agent is implemented as its own file with its own locked system prompt,
+called through its own API route, so the reasoning of each stage is visible
+and auditable rather than hidden inside one large prompt:
+
+| Agent | Role | Code |
+|---|---|---|
+| I | Drafts the initial letter | `lib/agents/advocateDraft.js` |
+| II | Finds rejection grounds | `lib/agents/bureaucraticChallenge.js` |
+| III | Resolves objections, compiles final letter | `lib/agents/advocateRebuttal.js` |
+
+The frontend (`pages/index.js`) takes a citizen's issue as input, calls the
+three agents in sequence, and displays each stage as it completes, so the
+reasoning process is visible rather than a black box producing a final
+answer.
+
+## Running it locally
 
 ```bash
 npm install
 cp .env.example .env.local
-# edit .env.local and paste your key from https://console.anthropic.com/settings/keys
+```
+
+Add your Anthropic API key to `.env.local` as `ANTHROPIC_API_KEY` (get one at
+console.anthropic.com under Settings → API Keys), then:
+
+```bash
 npm run dev
 ```
 
-Open http://localhost:3000, fill in the civic issue form, and click
-"Run 3-agent pipeline".
-
-## 2. Deploy to Vercel
-
-**Option A — via GitHub (recommended for a hackathon demo link):**
-
-1. Push this folder to a new GitHub repo:
-   ```bash
-   git init
-   git add .
-   git commit -m "Smart Bharat Civic Advocate Engine"
-   git branch -M main
-   git remote add origin https://github.com/<your-username>/<repo-name>.git
-   git push -u origin main
-   ```
-2. Go to https://vercel.com/new, sign in, and click "Import" on your GitHub repo.
-3. Vercel auto-detects Next.js — no build config changes needed.
-4. Before deploying, add your environment variable:
-   - Go to **Project Settings → Environment Variables**
-   - Add `ANTHROPIC_API_KEY` = your key, for the Production environment
-5. Click **Deploy**. You'll get a live `https://<project-name>.vercel.app` link —
-   that's what you share with the judges.
-
-**Option B — via Vercel CLI (fastest, no GitHub needed):**
-
-```bash
-npm install -g vercel
-vercel login
-vercel
-# follow the prompts, accept defaults
-vercel env add ANTHROPIC_API_KEY
-# paste your key when prompted, select "Production"
-vercel --prod
-```
-
-The final command prints your live deployment URL.
+Visit `http://localhost:3000`, fill in the issue form, and run the pipeline.
 
 ## Project structure
 
 ```
 sb-cae/
 ├── pages/
-│   ├── index.js              # dashboard UI + form
-│   ├── _app.js                # global styles import
+│   ├── index.js                 # UI: issue form + live pipeline view
+│   ├── _app.js
 │   └── api/
-│       ├── agent1-draft.js    # Agent I endpoint
-│       ├── agent2-challenge.js # Agent II endpoint
-│       └── agent3-rebuttal.js  # Agent III endpoint
+│       ├── agent1-draft.js      # Agent I endpoint
+│       ├── agent2-challenge.js  # Agent II endpoint
+│       └── agent3-rebuttal.js   # Agent III endpoint
 ├── lib/
-│   ├── anthropicClient.js     # shared Anthropic SDK client
+│   ├── anthropicClient.js       # shared Anthropic SDK client
 │   └── agents/
 │       ├── advocateDraft.js
 │       ├── bureaucraticChallenge.js
@@ -86,11 +94,17 @@ sb-cae/
 └── .env.example
 ```
 
-## Notes
+## Known limitations
 
-- Uses `claude-sonnet-4-6` — swap the model string in the three agent files if you
-  want to try a different one.
-- Agent III returns strict JSON (final letter, authorities, checklist) so the
-  frontend never has to guess how to parse it.
-- If a demo run fails, the most common cause is a missing/incorrect
-  `ANTHROPIC_API_KEY` — check the error banner under the "Run pipeline" button.
+- Legal citations are generated by the model and should be verified before
+  being relied on for an actual filing; this is a drafting aid, not legal
+  advice.
+- Agent III is instructed to return structured JSON; if the model deviates
+  from that format, the API falls back to returning the raw text so the
+  pipeline does not hard-fail, but the frontend will display it unformatted.
+- Ward and jurisdiction data (e.g. which corporation governs which area) is
+  supplied by the user or reasoned about by the model at request time; it is
+  not backed by a live government database, and should be confirmed against
+  the relevant civic body before submission.
+
+
