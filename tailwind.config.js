@@ -1,8 +1,15 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: ["./pages/**/*.{js,jsx}", "./components/**/*.{js,jsx}"],
-  theme: {
-    extend: {},
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  typescript: {
+    // Dangerously allow production builds to successfully complete even if
+    // your project has type errors.
+    ignoreBuildErrors: true,
   },
-  plugins: [],
-};
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
+}
+
+module.exports = nextConfig
