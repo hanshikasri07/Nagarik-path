@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Special+Elite&family=Zilla+Slab:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap");
+
+.font-note {
+  font-family: "Special Elite", "Courier New", monospace;
+}
+.font-head,
+.font-stamp {
+  font-family: "Zilla Slab", Georgia, serif;
+}
+.font-mono2 {
+  font-family: "JetBrains Mono", monospace;
+}
+
+@keyframes flow {
+  0% {
+    transform: translateX(-2rem);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+@keyframes stampIn {
+  0% {
+    opacity: 0;
+    transform: scale(2) rotate(-20deg);
+  }
+  100% {
+    opacity: 0.9;
+    transform: scale(1) rotate(var(--r, -8deg));
+  }
+}
+@keyframes fadein {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pulseGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0px 0px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 22px 4px currentColor;
+  }
+}
+@keyframes drift {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(20px, -15px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+.node-active {
+  animation: pulseGlow 1.8s ease-in-out infinite;
+}
+.bg-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.25;
+  animation: drift 12s ease-in-out infinite;
+}
